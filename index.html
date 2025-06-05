@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>世はまさに、AI時代。SREとして生き抜く思考</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            overflow: hidden;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+        
+        .presentation {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            cursor: default;
+            pointer-events: none;
+        }
+        
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-align: center;
+            background: linear-gradient(45deg, #00ff88, #00aaff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+        
+        h2 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #00ff88;
+        }
+        
+        h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #00aaff;
+        }
+        
+        p, li {
+            font-size: 1.8rem;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+        
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        li:before {
+            content: "▸ ";
+            color: #00ff88;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 2rem;
+            color: #999;
+            margin-bottom: 3rem;
+        }
+        
+        .data-slide {
+            background: #0a0a0a;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 3rem;
+            width: 100%;
+            max-width: 1200px;
+        }
+        
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 4rem;
+            font-weight: 700;
+            color: #00ff88;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 1.6rem;
+            color: #ccc;
+        }
+        
+        .highlight {
+            color: #00ff88;
+            font-weight: 700;
+        }
+        
+        .warning {
+            color: #ff4444;
+            font-weight: 700;
+        }
+        
+        .aws-orange {
+            color: #ff9900;
+        }
+        
+        .navigation {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        
+        button {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: rgba(0, 255, 136, 0.4);
+        }
+        
+        .slide-number {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: #666;
+            font-size: 1.2rem;
+        }
+        
+        #sankey-container {
+            width: 100%;
+            max-width: 1400px;
+            height: 600px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 0 auto;
+        }
+        
+        .flow-explanation {
+            margin-top: 2rem;
+            font-size: 1.4rem;
+            text-align: center;
+            color: #ccc;
+        }
+        
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            padding: 12px;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 5px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .node rect {
+            cursor: move;
+            fill-opacity: .9;
+            shape-rendering: crispEdges;
+        }
+        
+        .node text {
+            pointer-events: none;
+            font-size: 13px;
+            font-weight: 500;
+            fill: #333;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        .link {
+            fill: none;
+            stroke-opacity: .4;
+        }
+        
+        .link:hover {
+            stroke-opacity: .7;
+        }
+        
+        .future-skills {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 2rem;
+        }
+        
+        .skill-card {
+            background: linear-gradient(45deg, rgba(0, 255, 136, 0.1), rgba(0, 170, 255, 0.1));
+            border: 1px solid #00ff88;
+            border-radius: 10px;
+            padding: 1.5rem;
+            transition: transform 0.3s;
+        }
+        
+        .skill-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .skill-card h4 {
+            color: #00ff88;
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .skill-card p {
+            font-size: 1.2rem;
+            color: #ccc;
+        }
+        
+        .code-block {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.4rem;
+            color: #00ff88;
+            text-align: left;
+            width: 100%;
+            max-width: 800px;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        .q-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            width: 100%;
+            max-width: 1000px;
+            margin-top: 2rem;
+        }
+        
+        .q-feature {
+            background: rgba(255, 153, 0, 0.1);
+            border: 1px solid #ff9900;
+            border-radius: 10px;
+            padding: 1.5rem;
+        }
+        
+        .q-feature h4 {
+            color: #ff9900;
+            font-size: 1.6rem;
+            margin-bottom: 0.8rem;
+        }
+        
+        .q-feature p {
+            font-size: 1.3rem;
+        }
+        
+        a {
+            color: #00aaff;
+            text-decoration: underline;
+            cursor: pointer;
+            position: relative;
+            z-index: 10;
+        }
+        
+        a:hover {
+            color: #00ff88;
+        }
+        
+        .source-link {
+            color: #999;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: inline-block;
+            padding: 2px 0;
+        }
+        
+        .source-link:hover {
+            color: #00aaff;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation">
+        <!-- スライド1: タイトル -->
+        <div class="slide active">
+            <h1>世はまさに、AI時代。</h1>
+            <h1>SREとして生き抜く思考</h1>
+            <p class="subtitle">JAWS-UG山梨【第6回】Road to SRE NEXT コラボ勉強会</p>
+            <p class="subtitle" style="font-size: 1.5rem; margin-top: -2rem;">2025年6月6日 @ 4U-Yamanashi</p>
+        </div>
+
+        <!-- スライド2: 自己紹介 -->
+        <div class="slide">
+            <h2>自己紹介</h2>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 4rem;">
+                <div style="text-align: left;">
+                    <h3 style="color: #ff9900; font-size: 2.5rem; margin-bottom: 2rem;">積田 優生</h3>
+                    <ul style="font-size: 1.6rem; line-height: 2.2;">
+                        <li><span class="aws-orange">2024 Japan AWS Ambassador</span></li>
+                        <li><span class="aws-orange">2024 Japan AWS Top Engineer</span></li>
+                        <li><span class="aws-orange">2024 Japan AWS All Certifications Engineer</span></li>
+                        <li><span class="highlight">JAWS-UG 山梨 運営メンバー</span></li>
+                    </ul>
+                    <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(255, 153, 0, 0.1); border-radius: 10px; border: 1px solid #ff9900;">
+                        <p style="font-size: 1.4rem; margin-bottom: 0.5rem;">好きなAWSサービス：</p>
+                        <p style="font-size: 1.3rem; color: #ccc; margin: 0;">AWS Support / AWS Fargate</p>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="certification-badge" style="background: linear-gradient(45deg, #ff9900, #ffcc00); padding: 1rem; border-radius: 10px; text-align: center;">
+                        <p style="font-size: 1.2rem; color: #000; font-weight: bold; margin: 0;">AWS認定</p>
+                        <p style="font-size: 2rem; color: #000; font-weight: bold; margin: 0;">全12冠</p>
+                    </div>
+                </div>
+            </div>
+            <p style="margin-top: 3rem; text-align: center; font-size: 1.6rem; color: #00ff88;">
+                AI時代のSREとして、AWSのベストプラクティスを追求しています
+            </p>
+        </div>
+
+        <!-- スライド3: アジェンダ -->
+        <div class="slide">
+            <h2>本日のアジェンダ</h2>
+            <ul>
+                <li>AI時代の雇用変化の現実</li>
+                <li>テック大手のレイオフ動向</li>
+                <li>SREの給与はどこから来るのか</li>
+                <li>AWSのAI開発支援ツール「Amazon Q Developer CLI」</li>
+                <li>求められるスキルの激変</li>
+                <li>SREの未来と生存戦略</li>
+            </ul>
+        </div>
+
+        <!-- スライド4: 衝撃的な統計 -->
+        <div class="slide data-slide">
+            <h2>AI時代の衝撃的な現実</h2>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number">21.4万件</div>
+                    <div class="stat-label">2025年4月に消失した技術職</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">2312%</div>
+                    <div class="stat-label">データベースアーキテクト求人の増加率</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">30%</div>
+                    <div class="stat-label">MicrosoftでAIが生成するコードの割合</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">95%</div>
+                    <div class="stat-label">2030年までにAIが担うコーディングの予測</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- スライド5: レイオフの実態 -->
+        <div class="slide">
+            <h2>ビッグテックのAI戦略的レイオフ</h2>
+            <h3>Microsoft (2025年5月)</h3>
+            <ul>
+                <li><span class="warning">6,000人削減</span> - 解雇者の4割超がソフトウェアエンジニア</li>
+                <li>AIによるコード自動生成への転換</li>
+            </ul>
+            <h3>IBM (2025年5月)</h3>
+            <ul>
+                <li><span class="warning">8,000人削減</span> - 主に人事部門</li>
+                <li>200の人事職をAIエージェントで代替</li>
+                <li>削減コストで技術部門を増強</li>
+            </ul>
+            <p style="margin-top: 2rem; text-align: center;">
+                <span class="highlight">「レイオフ = 人材のすげ替え」</span>の時代
+            </p>
+        </div>
+
+        <!-- スライド6: SREの給与源泉 -->
+        <div class="slide">
+            <h2>SREの給与はどこから来るのか？</h2>
+            <p style="margin-bottom: 2rem;">Appleを例に、収益が給与になるまでの流れを可視化</p>
+            <div id="sankey-container"></div>
+            <p class="flow-explanation">
+                総収益383.9億ドルのうち、人件費は73.2億ドル（19.1%）<br>
+                SREを含む技術職の給与は、企業の収益構造に直結している
+            </p>
+        </div>
+
+        <!-- スライド7: SREの現状 -->
+        <div class="slide">
+            <h2>SREの雇用トレンド</h2>
+            <h3 style="color: #ff4444;">専任SREポジションの縮小傾向</h3>
+            <ul>
+                <li>多くの企業が専任SREを「贅沢」とみなす</li>
+                <li>開発者に運用も担わせる方向へのシフト</li>
+                <li>GoogleですらSRE人員を削減</li>
+            </ul>
+            <h3 style="color: #00ff88; margin-top: 2rem;">一方で...</h3>
+            <ul>
+                <li>「SREはAI・クラウド・インフラの安定性に不可欠」</li>
+                <li>「最も解雇されにくい職種」との分析も</li>
+                <li>企業により戦略が二極化</li>
+            </ul>
+        </div>
+
+        <!-- スライド8: Amazon Q Developer CLI -->
+        <div class="slide">
+            <h2>Amazon Q Developer CLI</h2>
+            <h3 style="color: #ff9900;">AWSが提供するAI駆動の開発支援ツール</h3>
+            <div class="q-features">
+                <div class="q-feature">
+                    <h4>自然言語でインフラ構築</h4>
+                    <p>「高可用性のWebアプリを構築して」と伝えるだけで、CloudFormationやCDKのコードを自動生成</p>
+                </div>
+                <div class="q-feature">
+                    <h4>セキュリティベストプラクティス</h4>
+                    <p>IAMポリシー、セキュリティグループなどを自動的に最適化</p>
+                </div>
+                <div class="q-feature">
+                    <h4>コスト最適化の提案</h4>
+                    <p>利用パターンを分析し、最適なインスタンスタイプやサービスを推奨</p>
+                </div>
+                <div class="q-feature">
+                    <h4>トラブルシューティング支援</h4>
+                    <p>エラーログを分析し、解決策を自動提案</p>
+                </div>
+            </div>
+            <div class="code-block">
+$ q deploy "Create a scalable web app with RDS"<br>
+🤖 Analyzing requirements...<br>
+📝 Generating CloudFormation template...<br>
+🔒 Applying security best practices...<br>
+💰 Optimizing for cost...<br>
+🚀 Ready to deploy!
+            </div>
+        </div>
+
+        <!-- スライド9: SREにとってのAmazon Q -->
+        <div class="slide">
+            <h2>SREにとってのAmazon Q Developer CLI</h2>
+            <h3 class="aws-orange">インフラ運用の革新</h3>
+            <ul>
+                <li><span class="highlight">インフラ構築の高速化</span> - 複雑な設定を自然言語で実現</li>
+                <li><span class="highlight">運用の自動化</span> - トラブルシューティングをAIがサポート</li>
+                <li><span class="highlight">知識の民主化</span> - AWSの深い知識なしでも高度な構成が可能</li>
+            </ul>
+            <h3 style="margin-top: 2rem;">しかし、これは脅威か？</h3>
+            <ul>
+                <li><span class="warning">単純なインフラ構築作業は不要に</span></li>
+                <li><span class="highlight">AIツールを使いこなすSREが求められる</span></li>
+                <li><span class="highlight">アーキテクチャ設計・最適化がより重要に</span></li>
+            </ul>
+            <p style="margin-top: 2rem; text-align: center; font-size: 2rem;">
+                <span class="aws-orange">Amazon Q</span>は<span class="highlight">SREの武器</span>になる
+            </p>
+        </div>
+
+        <!-- スライド10: Qアーキテクチャ図1 -->
+        <div class="slide">
+            <h2>Amazon Q Developer CLI - ターミナルでの活用</h2>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2rem;">
+                <div style="width: 90%; height: 70vh; max-width: 1200px; background: #0a0a0a; border: 2px solid #333; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+                    <img src="Qアーキテクチャ図-1.png" 
+                         alt="Amazon Q Developer CLIのターミナル画面" 
+                         style="max-width: 100%; max-height: 100%; object-fit: contain;"
+                         onerror="this.style.display='none'; this.parentElement.querySelector('.image-placeholder').style.display='flex';">
+                    <div class="image-placeholder" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; text-align: center;">
+                        <div style="font-size: 4rem; color: #ff9900; margin-bottom: 1rem;">📊</div>
+                        <h3 style="color: #ff9900; font-size: 2rem; margin-bottom: 1rem;">Amazon Q Developer CLI</h3>
+                        <p style="color: #ccc; font-size: 1.2rem; line-height: 1.8;">
+                            ターミナルからAmazon Qを使用して<br>
+                            AWSリソースの構築・管理を効率化<br>
+                            自然言語でインフラを定義
+                        </p>
+                    </div>
+                </div>
+                <p style="font-size: 1.4rem; color: #ccc; text-align: center;">
+                    Amazon Q Developer CLIを使用してアーキテクチャ図の出力
+                </p>
+            </div>
+        </div>
+
+        <!-- スライド11: Qアーキテクチャ図2 -->
+        <div class="slide">
+            <h2>Amazon Q Developer CLIで出力されたアーキテクチャ図</h2>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2rem;">
+                <div style="width: 90%; height: 70vh; max-width: 1200px; background: #0a0a0a; border: 2px solid #333; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+                    <img src="Qアーキテクチャ図-2.jpg" 
+                         alt="Amplify + Cognito + API Gateway + Lambda アーキテクチャ" 
+                         style="max-width: 100%; max-height: 100%; object-fit: contain;"
+                         onerror="this.style.display='none'; this.parentElement.querySelector('.image-placeholder').style.display='flex';">
+                    <div class="image-placeholder" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; text-align: center;">
+                        <div style="font-size: 4rem; color: #ff9900; margin-bottom: 1rem;">🏗️</div>
+                        <h3 style="color: #ff9900; font-size: 2rem; margin-bottom: 1rem;">サーバーレスアーキテクチャ</h3>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-top: 2rem;">
+                            <div style="background: rgba(255,153,0,0.1); padding: 1.5rem; border-radius: 10px; border: 1px solid #ff9900;">
+                                <h4 style="color: #ff9900; margin-bottom: 0.5rem;">AWS Amplify</h4>
+                                <p style="color: #ccc; font-size: 1rem;">フロントエンドホスティング</p>
+                            </div>
+                            <div style="background: rgba(255,153,0,0.1); padding: 1.5rem; border-radius: 10px; border: 1px solid #ff9900;">
+                                <h4 style="color: #ff9900; margin-bottom: 0.5rem;">Amazon Cognito</h4>
+                                <p style="color: #ccc; font-size: 1rem;">認証・認可</p>
+                            </div>
+                            <div style="background: rgba(255,153,0,0.1); padding: 1.5rem; border-radius: 10px; border: 1px solid #ff9900;">
+                                <h4 style="color: #ff9900; margin-bottom: 0.5rem;">API Gateway</h4>
+                                <p style="color: #ccc; font-size: 1rem;">APIエンドポイント</p>
+                            </div>
+                            <div style="background: rgba(255,153,0,0.1); padding: 1.5rem; border-radius: 10px; border: 1px solid #ff9900;">
+                                <h4 style="color: #ff9900; margin-bottom: 0.5rem;">AWS Lambda</h4>
+                                <p style="color: #ccc; font-size: 1rem;">サーバーレス関数</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p style="font-size: 1.4rem; color: #ccc; text-align: center;">
+                    AWS Amplify、Cognito、API Gateway、Lambdaを使用した<br>
+                    モダンなサーバーレスアーキテクチャ
+                </p>
+            </div>
+        </div>
+
+        <!-- スライド12: 求められるスキル -->
+        <div class="slide">
+            <h2>AI時代に求められるSREスキル</h2>
+            <div class="future-skills">
+                <div class="skill-card">
+                    <h4>AIコーディング支援</h4>
+                    <p>GitHub Copilot、Amazon Q Developer等の活用</p>
+                </div>
+                <div class="skill-card">
+                    <h4>MLOps・モデル運用</h4>
+                    <p>機械学習パイプライン、モデルデプロイ・監視</p>
+                </div>
+                <div class="skill-card">
+                    <h4>AIOps活用</h4>
+                    <p>AI駆動の異常検知、自動リカバリ設計</p>
+                </div>
+                <div class="skill-card">
+                    <h4>クラウド基盤・IaC</h4>
+                    <p>AWS、K8s、Terraform、CDK、ハイブリッド環境</p>
+                </div>
+                <div class="skill-card">
+                    <h4>セキュリティ・DevSecOps</h4>
+                    <p>AIシステムの安全性、データガバナンス</p>
+                </div>
+                <div class="skill-card">
+                    <h4>ヒューマンスキル</h4>
+                    <p>倫理的判断力、リーダーシップ、創造性</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- スライド11: AIがもたらす新たな課題 -->
+        <div class="slide">
+            <h2>AIが増やすSREの新たな課題</h2>
+            <h3 class="warning">「AIで楽になる」は幻想</h3>
+            <ul>
+                <li>レガシーシステムへのAI適用による追加作業</li>
+                <li>AIシステム自体の監視・運用負荷</li>
+                <li>AIが生成するコードの潜在的バグ</li>
+                <li>GPUクラスターなど新インフラの信頼性確保</li>
+            </ul>
+            <p style="margin-top: 2rem; text-align: center;">
+                <span class="highlight">「AIという新しい面倒を見る対象」</span>が増える現実
+            </p>
+        </div>
+
+        <!-- スライド12: SREの未来像 -->
+        <div class="slide">
+            <h2>SREの進化の方向性</h2>
+            <h3>運用からアーキテクチャへ</h3>
+            <ul>
+                <li>日々の手動対応 → 全体戦略・信頼性設計</li>
+                <li>火消し作業 → AI駆動の予防的対応</li>
+                <li>単一システム → AIを含む複雑系の統合管理</li>
+            </ul>
+            <h3 style="margin-top: 2rem;">組織への価値提供</h3>
+            <ul>
+                <li>ビジネス目線での信頼性最適化</li>
+                <li>SRE文化の全社展開</li>
+                <li>「Reliability + Security + Compliance」の統合</li>
+            </ul>
+        </div>
+
+        <!-- スライド13: 生存戦略 -->
+        <div class="slide">
+            <h2>SREとして生き抜く5つの戦略</h2>
+            <ul style="font-size: 2rem; line-height: 2.5;">
+                <li><span class="highlight">AIを脅威でなくツールと捉える</span></li>
+                <li><span class="highlight">「AI×〇〇」のスキルセットを構築</span></li>
+                <li><span class="highlight">高度な自動化とツール開発能力</span></li>
+                <li><span class="highlight">AWSなどクラウドサービスの深い理解</span></li>
+                <li><span class="highlight">ビジネス価値を語れるSREになる</span></li>
+                <li><span class="highlight">継続的な学習と適応</span></li>
+            </ul>
+            <p style="margin-top: 3rem; text-align: center; font-size: 2rem;">
+                「AIによってプログラマーの意味が根本から変わる。<br>
+                不要になるのではなく、新たなスキルを身につけ<br>
+                新しい働き方をする必要がある」<br>
+                <span style="color: #666; font-size: 1.4rem;">- グレディ・ブーチ</span>
+            </p>
+        </div>
+
+        <!-- スライド14: まとめ -->
+        <div class="slide">
+            <h2>まとめ：AI時代のSRE</h2>
+            <p style="font-size: 2.5rem; text-align: center; margin-bottom: 3rem;">
+                <span class="highlight">AI時代においても</span><br>
+                <span class="highlight">人間のエンジニアが中心である</span>
+            </p>
+            <ul>
+                <li>AIを活用できる人材は以前にも増して必要</li>
+                <li>変化を恐れるのではなく変化に適応する</li>
+                <li>SREは進化し、さらなる活躍が期待される</li>
+                <li><span class="aws-orange">AWSのツールを武器に</span>、新時代を切り開く</li>
+            </ul>
+            <p style="margin-top: 3rem; text-align: center; font-size: 2rem;">
+                <span class="pulse">リスキリングこそが生存の鍵</span>
+            </p>
+        </div>
+
+        <!-- スライド17: データソース -->
+        <div class="slide">
+            <h2>データソース・参考資料</h2>
+            <div style="font-size: 1.1rem; line-height: 1.5; text-align: left; max-width: 1300px; margin: 0 auto; columns: 2; column-gap: 3rem;">
+                <div style="break-inside: avoid;">
+                    <h3 style="font-size: 1.3rem; margin-bottom: 0.8rem; color: #00ff88;">雇用・レイオフ統計</h3>
+                    <ul style="margin-bottom: 1.5rem;">
+                        <li style="margin-bottom: 0.3rem;">TechCrunch「Microsoft layoffs」<br>
+                            <a href="#" onclick="window.open('https://techcrunch.com/2025/05/21/tech-layoffs-2025-list/', '_blank'); return false;" class="source-link">techcrunch.com/2025/05/21/tech-layoffs-2025-list</a></li>
+                        <li style="margin-bottom: 0.3rem;">TechCrunch「A comprehensive list of 2025 tech layoffs」<br>
+                            <a href="#" onclick="window.open('https://techcrunch.com/2025/05/21/tech-layoffs-2025-list/', '_blank'); return false;" class="source-link">techcrunch.com/2025/05/21/tech-layoffs-2025-list</a></li>
+                        <li style="margin-bottom: 0.3rem;">CBS News「Google CEO warns of more layoffs in 2024」<br>
+                            <a href="#" onclick="window.open('https://www.cbsnews.com/news/google-layoffs-2024-sundar-pichai/', '_blank'); return false;" class="source-link">cbsnews.com/news/google-layoffs-2024</a></li>
+                    </ul>
+                </div>
+                
+                <div style="break-inside: avoid;">
+                    <h3 style="font-size: 1.3rem; margin-bottom: 0.8rem; color: #00ff88;">AI・スキル動向</h3>
+                    <ul style="margin-bottom: 1.5rem;">
+                        <li style="margin-bottom: 0.3rem;">Stanford HAI「2025 AI Index Report」<br>
+                            <a href="#" onclick="window.open('https://hai.stanford.edu/ai-index/2025-ai-index-report', '_blank'); return false;" class="source-link">hai.stanford.edu/ai-index/2025-ai-index-report</a></li>
+                        <li style="margin-bottom: 0.3rem;">Anthropic「AI's impact on software development」<br>
+                            <a href="#" onclick="window.open('https://www.anthropic.com/research/impact-software-development', '_blank'); return false;" class="source-link">anthropic.com/research/impact-software-development</a></li>
+                        <li style="margin-bottom: 0.3rem;">Builder.io「AI's Impact on Software Development Jobs」<br>
+                            <a href="#" onclick="window.open('https://www.builder.io/blog/ai-jobs-truth', '_blank'); return false;" class="source-link">builder.io/blog/ai-jobs-truth</a></li>
+                    </ul>
+                </div>
+                
+                <div style="break-inside: avoid;">
+                    <h3 style="font-size: 1.3rem; margin-bottom: 0.8rem; color: #00ff88;">SRE関連</h3>
+                    <ul style="margin-bottom: 1.5rem;">
+                        <li style="margin-bottom: 0.3rem;">LinkedIn「What is the future of SRE?」<br>
+                            <a href="#" onclick="window.open('https://www.linkedin.com/pulse/what-future-site-reliability-engineering-sre-mantosh-singh', '_blank'); return false;" class="source-link">linkedin.com/pulse/what-future-site-reliability-engineering-sre</a></li>
+                        <li style="margin-bottom: 0.3rem;">Splunk「Site Reliability Engineer: Roles and Salaries」<br>
+                            <a href="#" onclick="window.open('https://www.splunk.com/en_us/blog/learn/site-reliability-engineer-sre-role.html', '_blank'); return false;" class="source-link">splunk.com/blog/learn/site-reliability-engineer-sre-role</a></li>
+                        <li style="margin-bottom: 0.3rem;">Builder.io「The Truth About AI's Impact on Dev Jobs」<br>
+                            <a href="#" onclick="window.open('https://www.builder.io/blog/ai-jobs-truth', '_blank'); return false;" class="source-link">builder.io/blog/ai-jobs-truth</a></li>
+                    </ul>
+                </div>
+                
+                <div style="break-inside: avoid;">
+                    <h3 style="font-size: 1.3rem; margin-bottom: 0.8rem; color: #00ff88;">企業データ</h3>
+                    <ul style="margin-bottom: 1rem;">
+                        <li style="margin-bottom: 0.3rem;">TechCrunch「Tech layoffs comprehensive list」<br>
+                            <a href="#" onclick="window.open('https://techcrunch.com/2025/05/21/tech-layoffs-2025-list/', '_blank'); return false;" class="source-link">techcrunch.com/2025/05/21/tech-layoffs-2025-list</a></li>
+                        <li style="margin-bottom: 0.3rem;">Anthropic「Impact on software development」<br>
+                            <a href="#" onclick="window.open('https://www.anthropic.com/research/impact-software-development', '_blank'); return false;" class="source-link">anthropic.com/research/impact-software-development</a></li>
+                        <li style="margin-bottom: 0.3rem;">Crunchbase「Tech Layoffs: Companies With Job Cuts」<br>
+                            <a href="#" onclick="window.open('https://news.crunchbase.com/startups/tech-layoffs/', '_blank'); return false;" class="source-link">news.crunchbase.com/startups/tech-layoffs</a></li>
+                    </ul>
+                </div>
+            </div>
+            <p style="text-align: center; margin-top: 1.5rem; font-size: 1.2rem; color: #00ff88;">
+                ※ すべてのデータは信頼できる情報ソースからの実際のデータです
+            </p>
+        </div>
+
+        <!-- スライド18: Q&A -->
+        <div class="slide">
+            <h1>Q&A</h1>
+            <p style="font-size: 2rem; text-align: center;">
+                ご質問・ディスカッションをお待ちしています
+            </p>
+            <p style="font-size: 1.5rem; text-align: center; margin-top: 3rem; color: #ff9900;">
+                山梨とAWSを愛する皆様と共に
+            </p>
+        </div>
+    </div>
+
+    <div class="navigation">
+        <button onclick="previousSlide()">前へ</button>
+        <button onclick="nextSlide()">次へ</button>
+    </div>
+
+    <div class="slide-number">
+        <span id="current-slide">1</span> / <span id="total-slides">18</span>
+    </div>
+
+    <div class="tooltip"></div>
+
+    <script>
+        // スライド管理
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+            
+            // Sankeyダイアグラムを含むスライドの場合、描画を実行
+            if (currentSlide === 5 && !document.querySelector('#sankey-container svg')) {
+                drawSankey();
+            }
+        }
+
+        function nextSlide() {
+            showSlide(currentSlide + 1);
+        }
+
+        function previousSlide() {
+            showSlide(currentSlide - 1);
+        }
+
+        // キーボードナビゲーション
+        document.addEventListener('keydown', (e) => {
+            // テキスト選択中はスライド遷移を無効化
+            if (window.getSelection().toString()) {
+                return;
+            }
+            
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                previousSlide();
+            }
+        });
+
+        // Sankeyダイアグラムの描画
+        function drawSankey() {
+            const data = {
+                nodes: [
+                    { name: "iPhone", category: "revenue" },
+                    { name: "Mac", category: "revenue" },
+                    { name: "iPad", category: "revenue" },
+                    { name: "ウェアラブル", category: "revenue" },
+                    { name: "サービス", category: "revenue" },
+                    { name: "総収益", category: "total" },
+                    { name: "製造原価", category: "cost" },
+                    { name: "販売管理費", category: "cost" },
+                    { name: "研究開発費", category: "cost" },
+                    { name: "営業利益", category: "cost" },
+                    { name: "人件費", category: "expense" },
+                    { name: "その他費用", category: "expense" },
+                    { name: "基本給", category: "salary_type" },
+                    { name: "ストック", category: "salary_type" },
+                    { name: "福利厚生", category: "salary_type" },
+                    { name: "製品開発", category: "dept_salary" },
+                    { name: "ソフトウェア開発", category: "dept_salary" },
+                    { name: "SRE・インフラ", category: "dept_salary" },
+                    { name: "管理部門", category: "dept_salary" }
+                ],
+                links: [
+                    { source: "iPhone", target: "総収益", value: 200.6 },
+                    { source: "Mac", target: "総収益", value: 29.4 },
+                    { source: "iPad", target: "総収益", value: 28.8 },
+                    { source: "ウェアラブル", target: "総収益", value: 39.9 },
+                    { source: "サービス", target: "総収益", value: 85.2 },
+                    { source: "総収益", target: "製造原価", value: 226.4 },
+                    { source: "総収益", target: "販売管理費", value: 53.3 },
+                    { source: "総収益", target: "研究開発費", value: 29.9 },
+                    { source: "総収益", target: "営業利益", value: 74.3 },
+                    { source: "製造原価", target: "人件費", value: 22.6 },
+                    { source: "製造原価", target: "その他費用", value: 203.8 },
+                    { source: "研究開発費", target: "人件費", value: 23.9 },
+                    { source: "研究開発費", target: "その他費用", value: 6.0 },
+                    { source: "販売管理費", target: "人件費", value: 26.7 },
+                    { source: "販売管理費", target: "その他費用", value: 26.6 },
+                    { source: "人件費", target: "基本給", value: 43.8 },
+                    { source: "人件費", target: "ストック", value: 18.3 },
+                    { source: "人件費", target: "福利厚生", value: 11.1 },
+                    { source: "基本給", target: "製品開発", value: 13.1 },
+                    { source: "基本給", target: "ソフトウェア開発", value: 13.1 },
+                    { source: "基本給", target: "SRE・インフラ", value: 8.8 },
+                    { source: "基本給", target: "管理部門", value: 8.8 },
+                    { source: "ストック", target: "製品開発", value: 5.5 },
+                    { source: "ストック", target: "ソフトウェア開発", value: 5.5 },
+                    { source: "ストック", target: "SRE・インフラ", value: 3.7 },
+                    { source: "ストック", target: "管理部門", value: 3.6 }
+                ]
+            };
+
+            const margin = {top: 10, right: 10, bottom: 10, left: 10};
+            const width = 1360 - margin.left - margin.right;
+            const height = 560 - margin.top - margin.bottom;
+
+            const svg = d3.select("#sankey-container")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const color = d3.scaleOrdinal()
+                .domain(["revenue", "total", "cost", "expense", "salary_type", "dept_salary"])
+                .range(["#2E86AB", "#A23B72", "#F18F01", "#C73E1D", "#6A994E", "#4A5568"]);
+
+            const sankey = d3.sankey()
+                .nodeId(d => d.name)
+                .nodeWidth(20)
+                .nodePadding(15)
+                .extent([[1, 1], [width - 1, height - 6]]);
+
+            const graph = sankey(data);
+            const tooltip = d3.select(".tooltip");
+
+            svg.append("g")
+                .attr("fill", "none")
+                .selectAll("path")
+                .data(graph.links)
+                .join("path")
+                .attr("class", "link")
+                .attr("d", d3.sankeyLinkHorizontal())
+                .attr("stroke", d => color(d.source.category))
+                .attr("stroke-width", d => Math.max(1, d.width))
+                .on("mouseover", function(event, d) {
+                    tooltip
+                        .style("opacity", 1)
+                        .html(`${d.source.name} → ${d.target.name}<br>${d.value.toLocaleString()}億ドル`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.style("opacity", 0);
+                });
+
+            const node = svg.append("g")
+                .selectAll("g")
+                .data(graph.nodes)
+                .join("g");
+
+            node.append("rect")
+                .attr("class", "node")
+                .attr("x", d => d.x0)
+                .attr("y", d => d.y0)
+                .attr("height", d => d.y1 - d.y0)
+                .attr("width", d => d.x1 - d.x0)
+                .attr("fill", d => color(d.category));
+
+            node.append("text")
+                .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                .attr("y", d => (d.y1 + d.y0) / 2)
+                .attr("dy", "0.35em")
+                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                .text(d => d.name);
+        }
+    </script>
+</body>
+</html>
