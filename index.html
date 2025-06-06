@@ -684,36 +684,62 @@
         </ul>
       </div>
     </div>
-
+    
     <!-- スライド13: AIによるアーキテクチャ図生成 -->
     <div class="slide">
       <h2>Claude Codeで出力されたアーキテクチャ図</h2>
       <div style="display: flex; flex-direction: column; align-items: center; gap: 2rem;">
         <div
+        style="width: 90%; height: 60vh; max-width: 1200px; background: #0a0a0a; border: 2px solid #ff9900; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+        <img src="AWSアーキテクチャ図-1.jpeg" alt="AIで生成されたAWSアーキテクチャ図"
+        style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;"
+        onerror="this.style.display='none'; this.parentElement.querySelector('.image-placeholder').style.display='flex';">
+        <div class="image-placeholder"
+        style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; text-align: center;">
+        <div style="font-size: 4rem; color: #ff9900; margin-bottom: 1rem;">🏗️</div>
+        <h3 style="color: #ff9900; font-size: 2rem; margin-bottom: 1rem;">AWSアーキテクチャ図</h3>
+        <p style="color: #ccc; font-size: 1.2rem; line-height: 1.8;">
+          AIが自然言語から<br>
+          複雑なアーキテクチャ図を自動生成
+        </p>
+      </div>
+    </div>
+    <p style="font-size: 1.4rem; color: #ccc; text-align: center;">
+      自然言語でTerraformコードからAWSアーキテクチャ図を自動生成！<br>
+      drawio形式で出力可能なので微修正も可能。
+    </p>
+  </div>
+</div>
+
+    <!-- スライド14: Claude料金 -->
+    <div class="slide">
+      <h2>Claude Code...定額素敵</h2>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 2rem;">
+        <div
           style="width: 90%; height: 60vh; max-width: 1200px; background: #0a0a0a; border: 2px solid #ff9900; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
-          <img src="AWSアーキテクチャ図-1.jpeg" alt="AIで生成されたAWSアーキテクチャ図"
+          <img src="Claude料金.png" alt="Claude料金プラン"
             style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;"
             onerror="this.style.display='none'; this.parentElement.querySelector('.image-placeholder').style.display='flex';">
           <div class="image-placeholder"
             style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; text-align: center;">
-            <div style="font-size: 4rem; color: #ff9900; margin-bottom: 1rem;">🏗️</div>
-            <h3 style="color: #ff9900; font-size: 2rem; margin-bottom: 1rem;">AWSアーキテクチャ図</h3>
+            <div style="font-size: 4rem; color: #ff9900; margin-bottom: 1rem;">💰</div>
+            <h3 style="color: #ff9900; font-size: 2rem; margin-bottom: 1rem;">Claude料金プラン</h3>
             <p style="color: #ccc; font-size: 1.2rem; line-height: 1.8;">
-              AIが自然言語から<br>
-              複雑なアーキテクチャ図を自動生成
+              無料版、プロ版、チーム版の<br>
+              料金体系とプラン比較
             </p>
           </div>
         </div>
         <p style="font-size: 1.4rem; color: #ccc; text-align: center;">
-          自然言語でTerraformコードからAWSアーキテクチャ図を自動生成！<br>
-          drawio形式で出力可能なので微修正も可能。
+          画像はMax 20xプラン定額200ドル/月でVibe Codingした時のトークン使用量とコスト...💸<br>
+          Proプラン定額20ドル/月でClaude Codeが利用可能！
         </p>
       </div>
     </div>
 
-    <!-- スライド14: 求められるスキル -->
-    <div class="slide">
-      <h2>AI時代に求められるSREスキル</h2>
+<!-- スライド15: 求められるスキル -->
+<div class="slide">
+  <h2>AI時代に求められるSREスキル</h2>
       <div class="future-skills">
         <div class="skill-card">
           <h4>AIコーディング支援</h4>
@@ -742,7 +768,7 @@
       </div>
     </div>
 
-    <!-- スライド15: AIがもたらす新たな課題 -->
+    <!-- スライド16: AIがもたらす新たな課題 -->
     <div class="slide">
       <h2>AIが増やすSREの新たな課題</h2>
       <h3 class="warning">「AIで楽になる」は幻想</h3>
@@ -758,7 +784,7 @@
       </p>
     </div>
 
-    <!-- スライド16: 生存戦略 -->
+    <!-- スライド17: 生存戦略 -->
     <div class="slide">
       <h2>SREとして生き抜く5つの戦略</h2>
       <ul style="font-size: 2rem; line-height: 2.5;">
@@ -776,7 +802,7 @@
       </p>
     </div>
 
-    <!-- スライド17: まとめ -->
+    <!-- スライド18: まとめ -->
     <div class="slide">
       <h1>まとめ</h1>
       <h2>AI時代のSRE</h2>
@@ -796,7 +822,7 @@
       </div>
     </div>
 
-    <!-- スライド18: データソース -->
+    <!-- スライド19: データソース -->
     <div class="slide">
       <h2>データソース・参考資料</h2>
       <div
@@ -888,7 +914,7 @@
       </p>
     </div>
 
-    <!-- スライド19: Q&A -->
+    <!-- スライド20: Q&A -->
     <div class="slide">
       <h1>Thank You.</h1>
       <p style="font-size: 1.5rem; text-align: center; margin-top: 3rem; color: #ff9900;">
@@ -906,7 +932,7 @@
   </div>
 
   <div class="slide-number">
-    <span id="current-slide">1</span> / <span id="total-slides">20</span>
+    <span id="current-slide">1</span> / <span id="total-slides">21</span>
   </div>
 
   <div class="tooltip"></div>
