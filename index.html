@@ -382,6 +382,36 @@
       color: #00aaff;
       text-decoration: underline;
     }
+
+    .new-badge {
+      display: inline-block;
+      background: linear-gradient(45deg, #ff4444, #ff6666);
+      color: white;
+      font-size: 1.2rem;
+      font-weight: bold;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      margin-left: 1rem;
+      box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
+      animation: pulse-new 2s infinite;
+      position: relative;
+      top: -0.2rem;
+    }
+
+    @keyframes pulse-new {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
+      }
+      50% {
+        transform: scale(1.1);
+        box-shadow: 0 4px 16px rgba(255, 68, 68, 0.6);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
+      }
+    }
   </style>
 </head>
 
@@ -430,7 +460,7 @@
     <div class="slide">
       <h2>本日のアジェンダ</h2>
       <ul>
-        <li>AI時代の雇用変化の現実</li>
+        <li>AI時代の雇用変化</li>
         <li>テック大手のレイオフ動向</li>
         <li>SREの給与はどこから来るのか</li>
         <li>AWSのAI開発支援ツール「Amazon Q Developer CLI」</li>
@@ -441,7 +471,7 @@
 
     <!-- スライド4: 衝撃的な統計 -->
     <div class="slide data-slide">
-      <h2>AI時代の衝撃的な現実</h2>
+      <h2>AI時代の衝撃</h2>
       <div class="stats">
         <div class="stat-box">
           <div class="stat-number">21.4万件</div>
@@ -617,7 +647,7 @@
 
     <!-- スライド12: Amazon QでClaude 4 Sonnet -->
     <div class="slide">
-      <h2>Amazon QでClaude 4 Sonnetが利用可能に！</h2>
+      <h2><span class="new-badge">NEW</span> Amazon QでClaude 4 Sonnetが利用可能に！</h2>
       <div
         style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; width: 100%; max-width: 1400px; margin: 0 auto;">
         <div
